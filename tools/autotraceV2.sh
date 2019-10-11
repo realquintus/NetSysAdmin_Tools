@@ -32,8 +32,10 @@ for compteur in $(seq 1 30);do #Boucle principale
 	for method in "${methods[@]}";do 	
 		rep=$(traceroute -n $method -f $compteur -m $compteur $dst | sed 's/*/#/g' | sed -n "2p");
 		if ! [[ $(echo $rep | grep "# # #") ]];then
-			echo -e "$rep\n" | awk '{print $2}';
+			echo -e "$rep\n" | awk '{print $2}' >> routes.txt;
 			break;
+		elif [[ $method = " -U -p 179"  ]];then
+			echo "#" >> routes.txt;
 		fi;
 	done;
 	compteur=$(($compteur + 1));
