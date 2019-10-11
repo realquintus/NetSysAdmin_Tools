@@ -6,7 +6,8 @@ usage (){
 	# On test si l'argument 1 existe
 dst=${1:?usage};	
 # On test si l'hôte est joignable
-if ! [[ $(ping $dst -c1 | grep "%" | cut -d "," -f3 | sed "s/ //g" | cut -c1) == "0" ]]; then
+ping -c1 $dst > /dev/null;
+if [ $? == 1 ]; then
 	usage;
 	echo -e "\n L'hôte $dst est injoignable";
 	exit 1;
@@ -22,57 +23,58 @@ if [[ $(echo -e $trace_init | grep "# # #") == "" ]];then
 	echo -e $trace_init;
 	exit 0;
 fi
-
-echo -e "digraph NetMap {\n" >> NetMap.xdot;
+	# On récupère le ttl des routeurs qui ne répondent pas
 compteur=1;
-
+tracert='traceroute -n -f $compteur -m $compteur';
+repsed='| sed "s/*/#/g" | sed "s/$/\\n/g';
+echorep='echo -e $rep | grep -v "traceroute"';
 while [ true  ];do #Boucle principale
 	echo "Testing default configuration";
-	rep=$(traceroute -n -f $compteur -m $compteur $dst | sed 's/*/#/g' | sed 's/$/\\n/g' | sed -n "2p");
+	rep=$(eval "$tracert $dst $repsed");
 	if [[ $(echo $rep | grep "# # #") == "" ]];then
-		echo -e $rep | grep -v "traceroute";
+		eval $echorep;
 	# Test si le routeur $compteur réponds a une trame tarceroute par défaut
 	else
 		echo -e "\tICMP";
-		rep=$(traceroute -n -f $compteur -m $compteur -I $dst | sed 's/*/#/g' | sed 's/$/\\n/g' | sed -n "2p");
+		rep=$(traceroute -n -f $compteur -m $compteur -I $dst | sed 's/*/#/g' | sed 's/$/\\n/g');
 		if [[ $(echo -e  $rep | grep "# # #") == "" ]];then
 			echo -e $rep | grep -v "traceroute";
 		# Test si le routeur répond à une trame ICMP
 		else
 			echo -e "\tTCP  \n\t\ton smtp port";
-			rep=$(traceroute -n -f $compteur -m $compteur -T -p 25 $dst | sed 's/*/#/g' | sed 's/$/\\n/g' | sed -n "2p");
+			rep=$(traceroute -n -f $compteur -m $compteur -T -p 25 $dst | sed 's/*/#/g' | sed 's/$/\\n/g');
 			if [[ $(echo -e  $rep | grep "# # #") == "" ]];then
 				echo -e $rep | grep -v "traceroute";
 			else
 				echo -e "\t\ton NTP port";
-				rep=$(traceroute -n -f $compteur -m $compteur -T -p 123 $dst | sed 's/*/#/g' | sed 's/$/\\n/g' | sed -n "2p");
+				rep=$(traceroute -n -f $compteur -m $compteur -T -p 123 $dst | sed 's/*/#/g' | sed 's/$/\\n/g');
 				
 				if [[ $(echo -e  $rep | grep "# # #") == "" ]];then
 					echo -e $rep | grep -v "traceroute";
 				else
 					
 					echo -e "\t\ton SSH port";
-					rep=$(traceroute -n -f $compteur -m $compteur -T -p 22 $dst | sed 's/*/#/g' | sed 's/$/\\n/g' | sed -n "2p");
+					rep=$(traceroute -n -f $compteur -m $compteur -T -p 22 $dst | sed 's/*/#/g' | sed 's/$/\\n/g');
 				
 					if [[ $(echo -e  $rep | grep "# # #") == "" ]];then
 						echo -e $rep | grep -v "traceroute";
 					else			
 			
 						echo -e "\t\ton HTTP port";
-						rep=$(traceroute -n -f $compteur -m $compteur -T -p 80 $dst | sed 's/*/#/g' | sed 's/$/\\n/g' | sed -n "2p");
+						rep=$(traceroute -n -f $compteur -m $compteur -T -p 80 $dst | sed 's/*/#/g' | sed 's/$/\\n/g');
 						if [[ $(echo -e  $rep | grep "# # #") == "" ]];then
 							echo -e $rep | grep -v "traceroute";
 						else
 							
 							echo -e "\t\ton HTTPS port";
-							rep=$(traceroute -n -f $compteur -m $compteur -T -p 443 $dst | sed 's/*/#/g' | sed 's/$/\\n/g' | sed -n "2p");
+							rep=$(traceroute -n -f $compteur -m $compteur -T -p 443 $dst | sed 's/*/#/g' | sed 's/$/\\n/g');
 							if [[ $(echo -e  $rep | grep "# # #") == "" ]];then
 								echo -e $rep | grep -v "traceroute";
 							else
 								echo -e "\tUDP";
 								declare -a ports=(21 53 68 69 179);
 								for i in ${ports[*]};do
-									rep=$(traceroute -n -f $compteur -m $compteur -p $i $dst | sed 's/*/#/g' | sed 's/$/\\n/g' | sed -n "2p");
+									rep=$(traceroute -n -f $compteur -m $compteur -p $i $dst | sed 's/*/#/g' | sed 's/$/\\n/g');
 									echo -e "\t\t on port number $i";
 									if [[ $(echo -e  $rep | grep "# # #") == "" ]];then
 										echo -e $rep | grep -v "traceroute";
@@ -89,7 +91,7 @@ echo -e "Router $compteur is unreachable\n";
 	fi;
 	
 	compteur=$(($compteur + 1));
-	if [[ -n $(echo -e $rep | grep $dst) || $compteur == 30 ]];then
+	if [[ -n $(echo -e $rep | grep -v "hops" | grep $dst) || $compteur == 30 ]];then
 		break;
 	fi;
 	
