@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage (){
-	echo -e "Autorace is a bash script that will try to get a answer from every router in traceroute to the host. To do that, it will try many protocols and ports.\nOptions:\n\t-a : This option is required, enter the host IPv4 address after.\n\t-v : Verbosee option\n\t-h : Show this help message."
+	echo -e "Autorace is a bash script that will try to get a answer from every router in traceroute to the host. To do that, it will try many protocols and ports.\nOptions:\n\t-a : This option is required, enter the host IPv4 address after.\n\t-v : Verbose option\n\t-h : Show this help message.";
 }
 
 while getopts "hva:" option;do
@@ -9,6 +9,7 @@ while getopts "hva:" option;do
 	case $option in
 		h)
 			usage
+			exit 0;
 			;;
 		v)
 			verb="true";
@@ -20,13 +21,15 @@ while getopts "hva:" option;do
 done
 
 	# On test si l'argument 1 existe
-#dst=${1:?$(usage)};
+if [ -z $dst ];then
+	usage;
+	exit 1;
+fi;
 # On test si l'hôte est joignable
 if ! [[ $(ping $dst -c1 | grep "%" | cut -d "," -f3 | sed "s/ //g" | cut -c1) == "0" ]]; then
-	usage;
 	echo -e "\n L'hôte $dst est injoignable";
 	exit 1;
-fi
+fi;
 echo -e "L'hôte $dst est joignable lancement de traceroute...\n";
 
 	# On lance un traceroute initial afin de déterminer les routeurs qui répondent pas, on remplace les * par des # et on ajoute \n a la fin de chaque pour que echo afin correctement la réponse
