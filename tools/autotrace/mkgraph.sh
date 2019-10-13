@@ -10,10 +10,8 @@ if ! [[ -a ./$file ]];then
 fi;
 
 sed -i 's/ $/'" \"$host\";"'/' $file;
-
-if [ $end -eq 0 ];then
+if [ $end -eq 0 ];then	
 	echo -e "\t\"$host\" -> " >> $file;
-else
+else	
 	echo "}" >> $file;
 fi;
-
