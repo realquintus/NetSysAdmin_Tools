@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage (){
-	echo -e "Autorace is a bash script that will try to get a answer from every router in traceroute to the host entered. To do that, it will try many protocols and ports. After receiving an answer from a router execute mkgraph.sh that add it to .dot file.\nOptions:\n\t-a : This option is required, enter the host IPv4 address after.\n\t-f : This option is used to enter the file .dot. Be careful if this file already exist, it will be erased. If this option is not entered, this file will be CURRENT_DIR/NetMap_HOST.dot\n\t-v : Verbose option\n\t-h : Show this help message.";
+	echo -e "Autorace is a bash script that will try to get a answer from every router in traceroute to the host entered. To do that, it will try many protocols and ports. After receiving an answer from a router execute mkgraph.sh that add it to .dot file.\n\nOptions:\n\t-a : This option is required, enter the host IPv4 address after.\n\t-f : This option is used to enter the file .dot. Be careful if this file already exist, it will be erased. If this option is not entered, this file will be CURRENT_DIR/NetMap_HOST.dot\n\t-v : Verbose option\n\t-h : Show this help message.";
 }
 
 while getopts "hva:f:" option;do
@@ -26,6 +26,7 @@ done
 if [ -z $file ];then
 	file="NetMap_to_$dst.dot"
 fi;
+echo "" > $file;
 	# Verify that the host adresse has been entered
 if [ -z $dst ];then
 	usage;
@@ -34,11 +35,11 @@ fi;
 	# Verify that the host is reachable
 ping -c1 $dst > /dev/null;
 	if [ $? -eq 1 ];then
-	echo -e "\n L'hôte $dst est injoignable";
+	echo -e "\n The host $dst is unreachable";
 	exit 1;
 fi;
 
-if [[ $verb = "true" ]];then echo -e "L'hôte $dst est joignable lancement de traceroute...\n";fi;
+if [[ $verb = "true" ]];then echo -e "The host $dst is reachable, traceroute is starting...\n";fi;
 
 	## On lance un traceroute initial afin de déterminer les routeurs qui répondent pas, on remplace les * par des # et on ajoute \n a la fin de chaque pour que echo afin correctement la réponse
 #trace_init=$(traceroute -n $dst | sed 's/*/#/g' | sed 's/$/\\n/g');
@@ -55,17 +56,17 @@ methods=("" " -I" " -T -p 25" " -T -p 123" " -T -p 22" " -T -p 80" " -T -p 443" 
 for compteur in $(seq 1 30);do #Main loop
 	for method in "${methods[@]}";do 	
 		if [[ $verb = "true" ]];then
-			echo -e "Trying: traceroute -n $method -f $compteur -m $compteur $dst"
+			echo -e "Trying: traceroute -q1 -n $method -f $compteur -m $compteur $dst"
 		fi;
-		rep=$(traceroute -n $method -f $compteur -m $compteur $dst | sed 's/*/#/g' | sed -n "2p");
-		if ! [[ $(echo $rep | grep "# # #") ]];then
+		rep=$(traceroute -z 3 -q1 -n $method -f $compteur -m $compteur $dst | sed 's/*/#/g' | sed -n "2p");
+		if ! [[ $(echo $rep | grep "#") ]];then
 			if [[ $verb = "true" ]];then
 				echo -e "Answer received:\n\t$rep";	
 			fi;
-			rep=$(echo "$rep" | awk '{print $2}');
+			rep=$(echo "$rep" | egrep -o '([0-9]{1,3}\.){3}[0-9]{1,3}');
 			break;
 		elif [[ $method = " -U -p 179"  ]];then
-			rep="#";
+			rep="#$compteur";
 			if [[ $verb = "true" ]];then
 				echo "Routeur n°$compteur is unreachable";
 			fi;
@@ -81,6 +82,6 @@ for compteur in $(seq 1 30);do #Main loop
 		./mkgraph.sh $file $rep 1;
 		break;
 	else
-		./mkgraph.sh $file $rep;
+		./mkgraph.sh $file $rep 0;
 	fi;	
 	done;
