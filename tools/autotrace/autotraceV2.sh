@@ -3,7 +3,7 @@
 usage (){
 	echo -e "Autorace is a bash script that will try to get a answer from every router in traceroute to the host entered. To do that, it will try many protocols and ports. After receiving an answer from a router execute mkgraph.sh that add it to .dot file.\n\nOptions:\n\t-a : This option is required, enter the host IPv4 address after.\n\t-f : This option is used to enter the file .dot. Be careful if this file already exist, it will be erased. If this option is not entered, this file will be CURRENT_DIR/NetMap_HOST.dot\n\t-v : Verbose option\n\t-h : Show this help message.";
 }
-
+# loop to identify options
 while getopts "hva:f:" option;do
 	case $option in
 		h)
@@ -26,7 +26,10 @@ done
 if [ -z $file ];then
 	file="NetMap_to_$dst.dot"
 fi;
+
 echo "" > $file;
+echo "" > AS.tmp;	# This file is used by mkgraph.sh to save the numbers of AS
+	
 	# Verify that the host adresse has been entered
 if [ -z $dst ];then
 	usage;
@@ -34,38 +37,30 @@ if [ -z $dst ];then
 fi;
 	# Verify that the host is reachable
 ping -c1 $dst > /dev/null;
-	if [ $? -eq 1 ];then
+if [ $? -eq 1 ];then
 	echo -e "\n The host $dst is unreachable";
 	exit 1;
 fi;
 
 if [[ $verb = "true" ]];then echo -e "The host $dst is reachable, traceroute is starting...\n";fi;
 
-	## On lance un traceroute initial afin de déterminer les routeurs qui répondent pas, on remplace les * par des # et on ajoute \n a la fin de chaque pour que echo afin correctement la réponse
-#trace_init=$(traceroute -n $dst | sed 's/*/#/g' | sed 's/$/\\n/g');
-	## On test si tout les routeurs ont répondus, dans ce cas on affiche la réponse et on arrète le script
-
-#if [[ $(echo -e $trace_init | grep "# # #") == "" ]];then
-#	echo -e "Tout les routeurs ont répondus du premier coup... Trop facile :\n\n";
-#	echo -e $trace_init;
-#	exit 0;
-#fi
 compteur=1;
-methods=("" " -I" " -T -p 25" " -T -p 123" " -T -p 22" " -T -p 80" " -T -p 443" " -U -p 21" " -U -p 53" " -U -p 68" " -U -p 69" " -U -p 179");
+methods=("" " -I" " -T -p 25" " -T -p 123" " -T -p 22" " -T -p 80" " -T -p 443" " -U -p 21" " -U -p 53" " -U -p 68" " -U -p 69" " -U -p 179"); #This array contain all options and arguments that will be used with traceroute
 
 for compteur in $(seq 1 30);do #Main loop
 	for method in "${methods[@]}";do 	
 		if [[ $verb = "true" ]];then
 			echo -e "Trying: traceroute -q1 -n $method -f $compteur -m $compteur $dst"
 		fi;
-		rep=$(traceroute -z 3 -q1 -n $method -f $compteur -m $compteur $dst | sed 's/*/#/g' | sed -n "2p");
-		if ! [[ $(echo $rep | grep "#") ]];then
+		rep=$(traceroute -A -z 3 -q1 -n $method -f $compteur -m $compteur $dst | sed 's/*/#/g' | sed -n "2p");# Traceroute command, replace * with # and print second line
+		if [[ $(echo $rep | egrep -o '([0-9]{1,3}\.){3}[0-9]{1,3}') ]];then # Check if there is a IPv4 address in traceroute answer
 			if [[ $verb = "true" ]];then
-				echo -e "Answer received:\n\t$rep";	
+				echo -e "Answer received:\n\t$rep";
 			fi;
-			rep=$(echo "$rep" | egrep -o '([0-9]{1,3}\.){3}[0-9]{1,3}');
+			AS=$(echo $rep | awk '{print $3}' | sed 's/\[//' | sed 's/\]//'); # Store the AS number and delete "[" and "]" because it can it will interpreted by grep in mkgraph.sh
+			rep=$(echo "$rep" | egrep -o '([0-9]{1,3}\.){3}[0-9]{1,3}'); # Store IPv4 address
 			break;
-		elif [[ $method = " -U -p 179"  ]];then
+		elif [[ $method = " -U -p 179"  ]];then # Check if it is the last method available
 			rep="#$compteur";
 			if [[ $verb = "true" ]];then
 				echo "Routeur n°$compteur is unreachable";
@@ -78,10 +73,11 @@ for compteur in $(seq 1 30);do #Main loop
 		echo -e "Adding $rep to the .dot file\n";
 	fi;
 	
-	if [[ -n $(echo -e $rep | grep $dst) ]];then
-		./mkgraph.sh $file $rep 1;
+	if [[ -n $(echo -e $rep | grep $dst) ]];then # Check if the IPv4 address is $dst
+		./mkgraph.sh $file $rep $AS 1; # the third argument mean end of .dot file (1) or not (0)
 		break;
 	else
-		./mkgraph.sh $file $rep 0;
+		./mkgraph.sh $file $rep $AS 0;
 	fi;	
 	done;
+rm -rf AS.tmp;
