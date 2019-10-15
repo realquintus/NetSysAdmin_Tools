@@ -62,6 +62,7 @@ for compteur in $(seq 1 30);do #Main loop
 			break;
 		elif [[ $method = " -U -p 179"  ]];then # Check if it is the last method available
 			rep="#$compteur";
+			AS="#";
 			if [[ $verb = "true" ]];then
 				echo "Routeur n°$compteur is unreachable";
 			fi;

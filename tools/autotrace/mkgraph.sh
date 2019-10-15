@@ -29,7 +29,7 @@ fi;
 if [[ $(echo $host | egrep -o '([0-9]{1,3}\.){3}[0-9]{1,3}') = $host ]];then
 	sed -i 's/ $/'" \"$host [$AS]\";\"$host [$AS]\" [color=$AScolor];"'/' $file;
 else
-	sed -i 's/ $/'" \"$host\";\"$host\" [color=red];"'/' $file;
+	sed -i 's/ $/'" \"$host [$AS]\";\"$host [$AS]\" [color=red];"'/' $file;
 fi
 
 if [ $end -eq 0 ];then	
