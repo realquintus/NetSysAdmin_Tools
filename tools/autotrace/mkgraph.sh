@@ -33,6 +33,7 @@ while getopts "hc:f:a:A:em" option;do
 		m)
 			if [[ $combine = "true" ]];then
 				modify="true";
+				dst_file=$file;
 			else
 				usage;
 				exit 1;
@@ -40,13 +41,21 @@ while getopts "hc:f:a:A:em" option;do
 			;;
 		esac;
 done
+
+colors=("" "darkorange4" "darkorange" "darkorchid4" "firebrick" "chocolate" "blueviolet" "red4" "salmon" "slateblue3" "goldenrod" "darkslategrey" "darkslategrey" "peru" "yellowgreen" "crimson"); # Color array
+
 if [[ $combine = "true" ]];then
 	if [[ $modify = "true" ]];then
 		sed -i '$d' $file;
-		sed '1,7d' $file_to_combine >> $file;
+		#sed '1,5d' $file_to_combine >> $file;
 	else
 		sed '$d' $file > $dst_file;
-		sed '1,7d' $file_to_combine >> $dst_file;
+	fi;
+	nbr_routes=$(($(cat $dst_file | grep localhost | wc -l)-1)); 
+	arrow_color=${colors[$nbr_routes]}
+	echo -e "\tedge [arrowsize=2, color=$arrow_color];" >> $dst_file;
+	sed '1,5d' $file_to_combine >> $dst_file;
+
 	#while read line;do
 	#	if [[ $(cat combine_$file | grep "$(echo $line | cut -d';' -f1)" ) = "" ]];then
 	#	echo -e "\t$line" >> combine_$file;
@@ -54,9 +63,10 @@ if [[ $combine = "true" ]];then
 	#done < file.tmp;
 	#uniq combine_$file > combine_$file;
 
-	fi;
 else
-	colors=("" "" "darkorange" "darkorchid4" "firebrick" "chocolate" "blueviolet" "red4" "salmon" "slateblue3" "goldenrod" "darkslategrey" "darkslategrey" "peru" "yellowgreen" "crimson"); # Color array
+	if ! [[ -f AS.txt ]];then
+		touch AS.txt;
+	fi;
 	if [[ $(cat $file) = "" ]];then # Write begining of .dot file and style informations
 		echo "digraph NetMap{" > $file;
 		echo -e "\tbgcolor=azure;" >> $file;
@@ -72,7 +82,6 @@ else
 
 	elif ! [[ $(cat AS.txt | grep "$AS") = "" ]];then # Check if the AS number is written in AS.txt
 		AScolor=${colors[$(cat -n AS.txt | grep $AS | awk '{print $1}')]}; #Use the line number of AS number in color array
-		cat -n AS.txt | grep $AS;
 	else
 		echo $AS >> AS.txt; # Write the AS number in AS.txt
 		AScolor=${colors[$(cat AS.txt | wc -l)]};
