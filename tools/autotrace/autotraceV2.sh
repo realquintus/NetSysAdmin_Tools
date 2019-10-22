@@ -28,7 +28,6 @@ if [ -z $file ];then
 fi;
 
 echo "" > $file;
-echo "" > AS.tmp;	# This file is used by mkgraph.sh to save the numbers of AS
 	
 	# Verify that the host adresse has been entered
 if [ -z $dst ];then
@@ -75,10 +74,9 @@ for compteur in $(seq 1 30);do #Main loop
 	fi;
 	
 	if [[ -n $(echo -e $rep | grep $dst) ]];then # Check if the IPv4 address is $dst
-		./mkgraph.sh $file $rep $AS 1; # the third argument mean end of .dot file (1) or not (0)
+		./mkgraph.sh -f $file -a $rep -A $AS -e; # the third argument mean end of .dot file (1) or not (0)
 		break;
 	else
-		./mkgraph.sh $file $rep $AS 0;
+		./mkgraph.sh -f $file -a $rep -A $AS;
 	fi;	
 	done;
-rm -rf AS.tmp;
