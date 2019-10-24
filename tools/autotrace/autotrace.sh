@@ -23,7 +23,6 @@ if [[ $(echo -e $trace_init | grep "# # #") == "" ]];then
 	exit 0;
 fi
 
-echo -e "digraph NetMap {\n" >> NetMap.xdot;
 compteur=1;
 
 while [ true  ];do #Boucle principale
