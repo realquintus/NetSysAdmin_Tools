@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage (){
-	echo -e "Autorace is a bash script that will try to get a answer from every router in traceroute to the host entered. To do that, it will try many protocols and ports. After receiving an answer from a router execute mkgraph.sh that add it to .dot file.\n\nOptions:\n\t-a : This option is required, enter the host IPv4 address after. You can also enter several IPv4 addresses separated by ':'. In this case, the file will contain all the routes.\n\t-f : This option is used to enter the file .dot. Be careful if this file already exist, it will be erased. If this option is not entered, this file will be CURRENT_DIR/NetMap_HOST.dot\n\t-v : Verbose option\n\t-h : Show this help message.";
+	echo -e "Autorace is a bash script that will try to get a answer from every router in traceroute to the host entered. To do that, it will try many protocols and ports. After receiving an answer from a router execute mkgraph.sh that add it to .dot file.\n\nOptions:\n\t-a : This option is required, enter the host's address after(FQDN or IPv4). You can also enter several hosts separated by ':'. In this case, the file will contain all the routes.\n\t-f : This option is used to enter the file .dot. Be careful if this file already exist, it will be erased. If this option is not entered, this file will be CURRENT_DIR/NetMap_HOST.dot\n\t-v : Verbose option\n\t-h : Show this help message.";
 }
 # loop to identify options
 while getopts "hva:f:" option;do
@@ -45,7 +45,11 @@ for i in $(seq 1 $nbr_host);do
 		fi;
 	fi;
 	compteur=1;
-
+	if ! [[ $(echo $dst | grep -E '[a-z]|[A-Z]') = "" ]];then
+		echo $dst
+		dst_fqdn=$dst;
+		dst=$(host $dst | sed -n '1p' | awk '{print $4}');
+	fi;
 	for compteur in $(seq 1 30);do #Main loop
 		for method in "${methods[@]}";do 	
 			if [[ $verb = "true" ]];then
@@ -72,12 +76,18 @@ for i in $(seq 1 $nbr_host);do
 			echo -e "Adding $rep to the .dot file\n";
 		fi;
 		if [[ -n $(echo -e $rep | grep $dst) ]];then # Check if the IPv4 address is $dst
+			if ! [[ $dst_fqdn = "" ]];then
+				rep=$(echo "$rep:$dst_fqdn");
+			fi
 			if [ $i -eq $nbr_host ];then
 				./mkgraph.sh -f $file -a $rep -A $AS -e file; # End of file
 			else
 				./mkgraph.sh -f $file -a $rep -A $AS -e route; # End of route
 			fi;
 			break;
+		elif [ $compteur -eq 30 ];then
+			rep="Max hopes reached for host $dst"
+			./mkgraph.sh -f $file -a $rep -A $AS -e route
 		else
 			./mkgraph.sh -f $file -a $rep -A $AS;
 		fi;	
