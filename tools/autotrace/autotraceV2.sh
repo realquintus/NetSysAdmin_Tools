@@ -1,5 +1,9 @@
 #!/bin/bash
 
+##################################################################################################
+#					AUTOTRACE SCRIPT					 #
+#     Web interface available at the following link: https://phousse.fr/projects/autotrace	 #
+##################################################################################################
 usage (){
 	echo -e "Autorace is a bash script that will try to get a answer from every router in traceroute to the host entered. To do that, it will try many protocols and ports. After receiving an answer from a router execute mkgraph.sh that add it to .dot file.\n\nOptions:\n\t-a : This option is required, enter the host's address after(FQDN or IPv4). You can also enter several hosts separated by ':'. In this case, the file will contain all the routes.\n\t-g : This option allows you to generate a graph\n\t\t-f : This option needs to be used with -g, otherwise it will be useless. -f is used to indicate the name of the graph file. Be careful if this file already exist, it will be erased. If this option is not entered, this file will be CURRENT_DIR/NetMap_HOST.dot\n\t-v : Verbose option\n\t-h : Show this help message.";
 }
@@ -32,6 +36,11 @@ while getopts "hva:f:g" option;do
 	esac;
 done
 ##
+if [ -z $nbr_host ];then
+	echo "Error: No host entered... Diplay usage message:"
+	usage;
+	exit 1;
+fi
 if [ -z $file ];then # Set default value to $file
 	file="NetMap_to_$dst.dot"
 fi;
@@ -43,16 +52,16 @@ methods=("" " -I" " -T -p 25" " -T -p 123" " -T -p 22" " -T -p 80" " -T -p 443" 
 ### Loop for diferents hosts
 for i in $(seq 1 $nbr_host);do 
 	if [[ $multiple_hosts = "true" ]];then
-		dst=$(echo $list_host | cut -d":" -f1);
-		list_host=$(echo $list_host | cut -d":" -f2-);
+		dst=$(echo $list_host | cut -d":" -f1); # Extracting host from the list
+		list_host=$(echo $list_host | cut -d":" -f2-); # Remove the host that will be use from the list
 		if [[ $verb="true" ]];then
-			echo -e "\nHost n°$i:\n";
+			echo -e "\nHost n°$i:";
 		fi;
 	fi;
 	compteur=1;
 	if ! [[ $(echo $dst | grep -E '[a-z]|[A-Z]') = "" ]];then
 		dst_fqdn=$dst;
-		dst=$(host $dst | sed -n '1p' | awk '{print $4}');
+		dst=$(host $dst | sed -n '1p' | awk '{print $4}'); # DNS request
 	fi;
 	#### Loop for number of hops
 	for compteur in $(seq 1 30);do

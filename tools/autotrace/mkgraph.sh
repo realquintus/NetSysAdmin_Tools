@@ -3,6 +3,7 @@ usage()
 {
 	echo -e "Mkgraph is a script that can create or combine dot files in order to make a net map.\n\nOptions:\n\t-f : This option is required, enter a file that will be used to create the dot file.\n\t-a : Use this option to enter the IPv4 address that will be add to the file.\n\t-A : Use this option to enter a AS number, if not entered the AS will be [AS?].\n\t-e : This option can handle two different argument which are: \n\t\troute : It indicates that this line is the last of the route.\n\t\tfile : It indicates that this line is the last of the dot file.\n\t-c : This option is used to combine 2 dot in a file named NetMap.dot. Enter the second file after. You can also choose a name different than NetMap by indicating the name after ':'.\n\t\tExample: ./mkgraph.sh -f file.dot -c other_file.dot:example.dot\n\t\t-m : This option need to by used with -c. It will add the fill entered with -c to the file entered with -f";
 }
+### Function that associates the AS number given as an arguments to a color
 colorAS()
 {
 	if [[ $1 = "#" ]];then
@@ -15,8 +16,8 @@ colorAS()
 		echo $randomcolor;
 	fi;
 }	
-colorAS
-	
+
+### Loop to identify option
 while getopts "hc:f:a:A:e:m" option;do
 	case $option in
 		h)
@@ -64,19 +65,18 @@ while getopts "hc:f:a:A:e:m" option;do
 done
 colors=("bisque4" "darkorange4" "darkorange" "darkorchid4" "firebrick" "chocolate" "blueviolet" "red4" "salmon" "slateblue3" "goldenrod" "darkslategrey" "darkslategrey" "peru" "yellowgreen" "crimson"); # Color array
 
-if [[ $combine = "true" ]];then
+if [[ $combine = "true" ]];then ## Combine option
 	if [[ $modify = "true" ]];then
 		sed -i '$d' $file;
-		#sed '1,5d' $file_to_combine >> $file;
 	else
-		sed '$d' $file > $dst_file;
+		sed '$d' $file > $dst_file; 
 	fi;
-	nbr_routes=$(($(cat $dst_file | grep localhost | wc -l)-1)); 
+	nbr_routes=$(($(cat $dst_file | grep localhost | wc -l)-1)); ## Count the number of "localhost" in the file
 	arrow_color=${colors[$nbr_routes]}
 	echo -e "\tedge [arrowsize=2, color=$arrow_color];" >> $dst_file;
 	sed '1,5d' $file_to_combine >> $dst_file;
 	
-else	
+else
 	if ! [[ -f AS.txt ]];then
 		touch AS.txt;
 	fi;
@@ -88,19 +88,6 @@ else
 		echo -e "\tlocalhost [color=blue]" >> $file;
 		echo -e "\tlocalhost -> " >> $file;
 	fi;
-	
-######### Replaced by Ascolor() function ##########################
-	#if [[ $AS = "#" ]];then #Check if the AS is known
-	#	AS="AS?";
-	#	AScolor="lightblue2";
-	
-	#elif ! [[ $(cat AS.txt | grep -E "^$AS$") = "" ]];then # Check if the AS number is written in AS.txt
-	#	AScolor=${colors[$(cat -n AS.txt | grep "$(echo -e "\x09")$AS$" | awk '{print $1}')]}; #Use the line number of AS number in color array
-	#else
-	#	echo $AS >> AS.txt; # Write the AS number in AS.txt
-	#	AScolor=${colors[$(cat AS.txt | wc -l)]};
-	#fi;
-##################################################################
 	AS=$(echo $AS | tr "/" ";"); # Replace / with ; to prevent the interpretation of character by sed
 	AScolor=$(colorAS $(echo $AS)); # Use AScolor() function in order to determine the color of the AS
 	
