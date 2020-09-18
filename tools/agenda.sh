@@ -36,15 +36,18 @@ while getopts "hcl:m:" option;do
 			;;
 	esac;
 done
-firefox https://my.epf.fr/ressourcesHelisa/emplois_du_temps/PROMOTIONS/empclajs.htm
+firefox https://my.epf.fr/ressourcesHelisa/emplois_du_temps/PROMOTIONS/empclajs.htm &
 sleep 1
-write_logs $login
-xdotool key Tab
-write_logs $mdp
-xdotool key Tab
-xdotool key Tab
-xdotool key Return
-i3-msg "[id="$(xdotool search --desktop --name 'Firefox' | sed -n 1p)"] focus"
+if [ $(xdotool search --desktop --name 'Authentication Required' >> /dev/null;echo $?) -eq 0 ];then
+	echo "test"
+	write_logs $login
+	xdotool key Tab
+	write_logs $mdp
+	xdotool key Tab
+	xdotool key Tab
+	xdotool key Return
+fi
+i3-msg "[con_id="$(xdotool search --desktop --name 'Firefox' | sed -n 1p)"] focus"
 xdotool key Tab
 xdotool key Tab
 for j in $(seq 1 16);do
