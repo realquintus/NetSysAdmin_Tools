@@ -42,7 +42,7 @@ if [ -z $nbr_host ];then
 	exit 1;
 fi
 if [ -z $file ];then # Set default value to $file
-	file="NetMap_to_$dst.dot"
+	file="NetMap.dot"
 fi;
 if [[ $graph = "true" ]];then
 	echo "" > $file;	
