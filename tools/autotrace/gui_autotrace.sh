@@ -7,7 +7,7 @@ if [[ $tool == "Autotrace" ]];then
 	if [ $? -eq 0 ];then
 		cmd=$cmd" -g"
 		file=$(dialog --backtitle "AutotraceV2 GUI" --title "File name" --inputbox "Enter the name of the file with .dot at the end. If empty the file will be called NetMap.dot" 10 60 --output-fd 1)
-		if [[$file != "" ]];then
+		if [[ $file != "" ]];then
 			cmd=$cmd" -f $file"
 		fi
 		dialog --backtitle "AutotraceV2 GUI" --title "Generate a graph ?" --yesno "\nDisplay the dot file after?\n" 10 30 --output-fd 1
