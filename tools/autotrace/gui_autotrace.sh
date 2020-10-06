@@ -2,7 +2,8 @@
 
 tool=$(dialog --backtitle "What do you want to do?" --title "Please choose your destiny" --menu "What tool do you want to use?" 20 61 5 "Autotrace" "A tool to automatize traceroute discovery by varying protocol and ports, it can also generate a beautily dot graph" "Mkgraph" "Another tool used by autotrace to create graphs, you can also use it to combine" --output-fd 1)
 if [[ $tool == "Autotrace" ]];then
-	cmd="./autotrace.sh -a "$(dialog --backtitle "AutotraceV2 GUI" --title "Hosts" --inputbox "Enter the host's address (FQDN or IPv4). You can also enter several hosts separated by ':'" 10 60 --output-fd 1)
+	host=$(dialog --backtitle "AutotraceV2 GUI" --title "Hosts" --inputbox "Enter the host's address (FQDN or IPv4). You can also enter several hosts separated by ':'" 10 60 --output-fd 1)
+	cmd="./autotrace.sh -a "$host
 	dialog --backtitle "AutotraceV2 GUI" --title "Generate a graph ?" --yesno "\nThis will create a .dot file that can be open with xdot\n\nDo you accept?" 10 30
 	if [ $? -eq 0 ];then
 		cmd=$cmd" -g"
@@ -12,10 +13,32 @@ if [[ $tool == "Autotrace" ]];then
 		fi
 		dialog --backtitle "AutotraceV2 GUI" --title "Generate a graph ?" --yesno "\nDisplay the dot file after?\n" 10 30 --output-fd 1
 		disp=$?
-		eval $cmd
+		nbr_host=$(($(echo $host | grep ":" | wc -l)+1))
+		eval $cmd >> /tmp/autotrace_output.tmp &
+		sleep 0.5
+		while (true)
+		do
+			line=$(wc -l $file | awk '{print $1}')
+			perce_per_line=$((100/(15*$nbr_host)))
+			if [ $nbr_host -gt 1 ] && [ $line -ne 0 ];then
+				line=$(($line-2*$nbr_host))
+			fi
+			progress=$(($line*$perce_per_line))
+			if [[ $progress -ge 100 ]];then
+				progress=99
+			fi
+			if [[ $(tail -n 1 $file) == "}" ]];then
+				echo "test"
+				break
+			fi
+			dialog --title "Retrieving routers" --gauge "Answer received $(tail -n 1 /tmp/autotrace_output.tmp)" 10 70 $progress &
+			sleep 0.5
+		done
+		clear
 		if [ $disp -eq 0 ];then
 			xdot $file
 		fi
+		sudo rm /tmp/autotrace_output.tmp
 	fi
 else
 	message=""
@@ -48,3 +71,5 @@ else
 	done
 	eval $cmd
 fi
+#rm /tmp/autotrace_gui.tmp 2> /dev/null
+#clear
