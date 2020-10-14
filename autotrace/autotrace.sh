@@ -36,6 +36,9 @@ while getopts "hva:f:g" option;do
 	esac;
 done
 ##
+
+methods=("" " -I" " -T -p 25" " -T -p 123" " -T -p 22" " -T -p 80" " -T -p 443" " -U -p 21" " -U -p 53" " -U -p 68"); #This array contain all options and arguments that will be used with traceroute
+
 if [ -z $nbr_host ];then
 	echo "Error: No host entered... Diplay usage message:"
 	usage;
@@ -47,7 +50,6 @@ fi;
 if [[ $graph = "true" ]];then
 	echo "" > $file;	
 fi;
-methods=("" " -I" " -T -p 25" " -T -p 123" " -T -p 22" " -T -p 80" " -T -p 443" " -U -p 21" " -U -p 53" " -U -p 68"); #This array contain all options and arguments that will be used with traceroute
 
 ### Loop for diferents hosts
 for i in $(seq 1 $nbr_host);do 
