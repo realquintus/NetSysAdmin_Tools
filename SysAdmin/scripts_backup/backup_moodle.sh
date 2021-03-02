@@ -17,13 +17,13 @@ rmFTP(){
         execFTP "delete $1"
 }
 #############
-cipher_key=""
-dir_data_backup=""
-dir_code_backup=""
+cipher_key="###"
+dir_data_backup="###"
+dir_code_backup="###"
 # Variables FTP #
-srv_ftp=""
-user_ftp=""
-passwd_ftp=""
+srv_ftp="###"
+user_ftp="###"
+passwd_ftp="###"
 date=$(date +"%Y-%m-%d_%H-%m-%S")
 #################
 
