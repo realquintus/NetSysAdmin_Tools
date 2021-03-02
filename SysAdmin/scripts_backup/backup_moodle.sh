@@ -11,47 +11,48 @@ close
 END_SCRIPT
 }
 sendFTP(){
-        execFTP "put $file_ftp $(echo $file_ftp | rev | cut -d "/" -f1 | rev)"
+        execFTP "put $1 $(echo $file_ftp | rev | cut -d "/" -f1 | rev)"
 }
 rmFTP(){
-        execFTP "delete /backup_moodle/$file_ftp"
+        execFTP "delete $1"
 }
 #############
-
-# Variables #
-srv_ftp="###"
-user_ftp="###"
-passwd_ftp="###"
+cipher_key=""
+dir_data_backup=""
+dir_code_backup=""
+# Variables FTP #
+srv_ftp=""
+user_ftp=""
+passwd_ftp=""
 date=$(date +"%Y-%m-%d_%H-%m-%S")
-ciph_key="###"
 #################
 
 # Creation du dump file et l'archive contenant datadir et dtb #
-pg_dump --username=moodle39 --file="/root/backup/moodle_${date}.sql" -C -d moodle39
-chown postgres:postgres /root/backup/moodle_${date}.sql
-chmod +x /root/backup/moodle_${date}.sql
-tar --selinux -czf /root/backup/moodle_${date}.tar.gz --absolute-names /var/moodledata /root/backup/moodle_${date}.sql
+pg_dump --username=moodle39 --file="$dir_data_backup/moodle_${date}.sql" -C -d moodle39
+chown postgres:postgres $dir_data_backup/moodle_${date}.sql
+chmod +x $dir_data_backup/moodle_${date}.sql
+tar --selinux -czf $dir_data_backup/moodle_${date}.tar.gz --absolute-names /var/moodledata $dir_data_backup/moodle_${date}.sql
 #####################################
 
 # Chiffrement du fichier (datadir et dtb) #
 file_ftp="moodle_${date}.tar.gz"
-openssl enc -e -aes-256-cbc -in /root/backup/$file_ftp -out /root/backup/${file_ftp}.ciph -pass pass:"$ciph_key" > /dev/null
+openssl enc -e -aes-256-cbc -in $dir_data_backup/$file_ftp -out $dir_data_backup/${file_ftp}.ciph -pass pass:"$cipher_key" > /dev/null
 ###########################################
 
 # Envoie sur le serveur FTP #
-file_ftp="/root/backup/"$(echo $file_ftp".ciph")
-sendFTP
-rm -rf /root/backup/*.ciph /root/backup/*.sql
+file_ftp="$dir_data_backup/"$(echo $file_ftp".ciph")
+sendFTP $file_ftp
+rm -rf $dir_data_backup/*.ciph $dir_data_backup/*.sql
 #############################
 
-# Suppression des fichiers vieux de plus de 30 jours #
+# Suppression des fichiers vieux de plus de 15 jours #
 # datadir et dtb #
-for i in $(ls /root/backup/);do
+for i in $(ls $dir_data_backup);do
         dif_date=$(echo "$((($(date +%s) - $(date -d $(echo $i | grep -Eo "[0-9]{4}(-[0-9]{2}){2}") '+%s'))/86400))")
-                if [ $dif_date -ge 30 ];then
-                        rm /root/backup/$i
+                if [ $dif_date -ge 15 ];then
+                        rm $dir_data_backup/$i
                         file_ftp="$(echo ${i}.ciph)"
-                        rmFTP
+                        rmFTP $file_ftp
                 fi
 done
 ########################################################
@@ -59,25 +60,27 @@ done
 #### Sauvegarde du code de moodle ####
 tar --selinux -czf /tmp/moodle_code_${date}.tar.gz --absolute-names /var/www/html/moodle
 # On verifie si le code a change depuis la derniere sauvegarde #
-if [[ $(md5sum /root/moodle_code.bak/$(ls /root/moodle_code.bak/ | sort | tail -n1) | awk '{print $1}') == $(md5sum /tmp/moodle_code_${date}.tar.gz | awk '{print $1}') ]];then
+if [[ $(md5sum $dir_code_backup/$(ls $dir_code_backup/ | sort | tail -n1) | awk '{print $1}') == $(md5sum /tmp/moodle_code_${date}.tar.gz | awk '{print $1}') ]];then
+        echo "same"
         rm /tmp/moodle_code_${date}.tar.gz
 else
-        mv /tmp/moodle_code_${date}.tar.gz /root/moodle_code.bak/
-        file_ftp="/root/moodle_code.bak/moodle_code_${date}.tar.gz"
-        openssl enc -e -aes-256-cbc -in $file_ftp -out ${file_ftp}.ciph -pass pass:"$ciph_key" > /dev/null
+        echo "dif"
+        mv /tmp/moodle_code_${date}.tar.gz $dir_code_backup/
+        file_ftp="$dir_code_backup/moodle_code_${date}.tar.gz"
+        openssl enc -e -aes-256-cbc -in $file_ftp -out ${file_ftp}.ciph -pass pass:"$cipher_key" > /dev/null
         file_ftp="${file_ftp}.ciph"
-        sendFTP
+        sendFTP $file_ftp
         rm -f $file_ftp
 fi
+
 ######################################
-# Suppression des fichiers vieux de plus de 30 jours #
-for i in $(ls /root/moodle_code.bak);do
+# Suppression des fichiers vieux de plus de 15 jours #
+for i in $(ls $dir_code_backup);do
         dif_date=$(echo "$((($(date +%s) - $(date -d $(echo $i | grep -Eo "[0-9]{4}(-[0-9]{2}){2}") '+%s'))/86400))")
-        last_file=$(execFTP "dir" | grep moodle_code_ | awk '{print $9}' | sort | tail -n1)
-        if [ $dif_date -ge 30 ] && [[ $i != $last_file ]];then
-                rm /root/moodle_code.bak/$i
-                file_ftp=$1
-                rmFTP
+        last_file=$(execFTP "dir" | grep moodle_code_ | awk '{print $NF}' | sort | tail -n1)
+        if [ $dif_date -ge 15 ] && [[ ${i}.ciph != $last_file ]];then
+                rm $dir_code_backup/$i
+                rmFTP "${i}.ciph"
         fi
 done
 ######################################################
